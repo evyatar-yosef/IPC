@@ -245,7 +245,7 @@ int main(int argc, char* argv[]) {
          else if(strcmp(param, "udp") == 0)
         send_data_ipv6_udp(buffer,bytes_read);
         printf("Performing IPv6 test with param: %s\n", param);
-        // Implement the necessary actions for IPv6 file transmission
+        // Implement the necessary actions for IPv6 file transmissionl
     } else if (strcmp(type, "mmap") == 0) {
         // Test for mmap communication
         // param can be file name
