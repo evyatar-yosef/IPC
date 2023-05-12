@@ -5,10 +5,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>  // Include this header for the close function
+#include <unistd.h>  
+#include <sys/un.h>  
 
-#define SERVER_IP "127.0.0.1"  // Replace with the actual server IP
-#define SERVER_IPV6 "fe80::b9d4:2fa4:1d80:de98/64"  // IPv4-mapped IPv6 address
-#define SERVER_PORT 8080      // Replace with the actual server port
+
+#define SERVER_IP "127.0.0.1"  
+#define SERVER_IPV6 "fe80::b9d4:2fa4:1d80:de98/64"  
+#define SERVER_PORT 8080      
+#define SOCKET_PATH "/home/evyatar/Desktop/operation system/m_3/socket"     
+#define SOCKET_PATH1 "/home/evyatar/Desktop/operation system/m_3/socket1"     
+
 
 void send_data_ipv4_tcp(const void* data, size_t data_size) {
     int sockfd;
@@ -150,6 +156,73 @@ void send_data_ipv6_udp(const void* data, size_t data_size) {
     // Close the socket
     close(sockfd);
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void send_data_uds_udp(const void* data, size_t data_size, const char* socket_path) {
+    int sockfd;
+    struct sockaddr_un server_addr;
+
+    // Create a UDP socket
+    sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (sockfd == -1) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Configure server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, socket_path, sizeof(server_addr.sun_path) - 1);
+
+    // Send the data
+    ssize_t bytes_sent = sendto(sockfd, data, data_size, 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    if (bytes_sent == -1) {
+        perror("Data send failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Sent data of size: %zu\n", data_size);
+
+    // Close the socket
+    close(sockfd);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void send_data_uds_stream(const void* data, size_t data_size, const char* socket_path1) {
+    int sockfd;
+    struct sockaddr_un server_addr;
+
+    // Create a UDS socket
+    sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Configure server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, socket_path1, sizeof(server_addr.sun_path) - 1);
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Connection failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Send the data
+    ssize_t bytes_sent = send(sockfd, data, data_size, 0);
+    if (bytes_sent == -1) {
+        perror("Data send failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Sent data of size: %zu\n", data_size);
+
+    // Close the socket
+    close(sockfd);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -237,7 +310,8 @@ int main(int argc, char* argv[]) {
          send_data_ipv4_udp(buffer, bytes_read);
 
         }
-    } else if (strcmp(type, "ipv6") == 0) {
+    } 
+    else if (strcmp(type, "ipv6") == 0) {
          if(strcmp(param, "tcp")==0){
               send_data_ipv6_tcp(buffer, bytes_read);
               printf("Performing IPv6 test with param: %s\n", param);
@@ -247,23 +321,25 @@ int main(int argc, char* argv[]) {
         printf("Performing IPv6 test with param: %s\n", param);
         // Implement the necessary actions for IPv6 file transmissionl
     } else if (strcmp(type, "mmap") == 0) {
-        // Test for mmap communication
-        // param can be file name
-        // Perform the appropriate actions
+      
         printf("Performing mmap test with param: %s\n", param);
         // Implement the necessary actions for mmap file transmission
     } else if (strcmp(type, "pipe") == 0) {
-        // Test for pipe communication
-        // param can be any additional required information
-        // Perform the appropriate actions
+       
         printf("Performing pipe test with param: %s\n", param);
         // Implement the necessary actions for pipe file transmission
     } else if (strcmp(type, "uds") == 0) {
-        // Test for Unix Domain Socket communication
-        // param can be any additional required information
-        // Perform the appropriate actions
-        printf("Performing Unix Domain Socket test with param: %s\n", param);
-        // Implement the necessary actions for Unix Domain Socket file transmission
+        if (strcmp(param, "dgram") == 0)
+        {
+            printf("Performing Unix Domain Socket test with param: %s\n", param);
+            send_data_uds_udp(buffer,bytes_read,SOCKET_PATH);
+        }
+        else if(strcmp(param, "stream") == 0)
+        {
+            printf("Performing Unix Domain Socket test with param: %s\n", param);
+            send_data_uds_udp(buffer,bytes_read,SOCKET_PATH1);
+        }            
+       
     } else {
         printf("Invalid communication type: %s\n", type);
         return 1;

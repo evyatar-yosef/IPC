@@ -4,9 +4,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>  // Include this header for the close function
+#include <unistd.h>  
+#include <sys/un.h>  
+
 
 #define SERVER_PORT 8080  // Replace with the actual server port
+#define BUFFER_SIZE 1024
 
 void receive_data_ipv4_tcp() {
     int sockfd, new_sockfd;
@@ -229,11 +232,121 @@ void receive_data_ipv6_udp() {
     // Close the socket
     close(sockfd);
 }
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+void receive_data_uds_udp() {
+    int sockfd;
+    struct sockaddr_un server_addr;
+    char* buffer = malloc(BUFFER_SIZE);
+
+    printf("Server listening on port %d\n", SERVER_PORT);
+
+    // Create a UDP socket
+    sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (sockfd == -1) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Configure server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, "/home/evyatar/Desktop/operation system/m_3/socket", sizeof(server_addr.sun_path) - 1);
+
+    // Bind the socket to the server address
+    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Socket bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Receive data
+    ssize_t bytes_received = recvfrom(sockfd, buffer, BUFFER_SIZE, 0, NULL, NULL);
+    if (bytes_received == -1) {
+        perror("Data receive failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Received data of size: %zd\n", bytes_received);
+    printf("Data received: %.*s\n", (int)bytes_received, buffer);
+
+    // Close the socket
+    close(sockfd);
+
+    // Free the buffer
+    free(buffer);
+}
+///////////////////////////////////////////////////////////////////////////////////////////////
+void receive_data_uds_stream() {
+    int server_sockfd, client_sockfd;
+    struct sockaddr_un server_addr, client_addr;
+    socklen_t client_len;
+    char* buffer = malloc(BUFFER_SIZE);
+
+    printf("Server listening on socket: /home/evyatar/Desktop/operation system/m_3/socket1\n");
+    
+    // Create a UDS server socket
+    server_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_sockfd == -1) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Configure server address
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sun_family = AF_UNIX;
+    strncpy(server_addr.sun_path, "/home/evyatar/Desktop/operation system/m_3/socket1", sizeof(server_addr.sun_path) - 1);
+    
+    // Bind the server socket to the server address
+    if (bind(server_sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Binding failed");
+        exit(EXIT_FAILURE);
+    }
+    printf("111111111111");
+    // Listen for incoming connections
+    if (listen(server_sockfd, 1) == -1) {
+        perror("Listening failed");
+        exit(EXIT_FAILURE);
+    }
+    printf("2222222222");
+
+    // Accept a client connection
+    client_len = sizeof(client_addr);
+    client_sockfd = accept(server_sockfd, (struct sockaddr*)&client_addr, &client_len);
+    if (client_sockfd == -1) {
+        perror("Accepting connection failed");
+        exit(EXIT_FAILURE);
+    }
+    printf("3333333333333");
+
+    // Receive data from the client
+    ssize_t bytes_received = recv(client_sockfd, buffer, BUFFER_SIZE, 0);
+    if (bytes_received == -1) {
+        perror("Data receive failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Received data of size: %zd\n", bytes_received);
+    printf("Data received: %.*s\n", (int)bytes_received, buffer);
+
+    // Close the client socket
+    close(client_sockfd);
+
+    // Close the server socket
+    close(server_sockfd);
+
+    // Free the buffer
+    free(buffer);
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 
 int main() {
    // receive_data_ipv4_tcp();
   //  receive_data_ipv4_udp();
     //receive_data_ipv6_tcp();
-    receive_data_ipv6_udp();
+  //  receive_data_ipv6_udp();
+   // receive_data_uds_udp();
+   receive_data_uds_stream();
     return 0;
 }
